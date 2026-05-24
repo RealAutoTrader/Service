@@ -1,144 +1,3 @@
-//
-//package com.example.autotrader;
-//
-//import org.slf4j.Logger;
-//import org.slf4j.LoggerFactory;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.boot.CommandLineRunner;
-//import org.springframework.boot.SpringApplication;
-//import org.springframework.boot.autoconfigure.SpringBootApplication;
-//import org.springframework.context.annotation.Bean;
-//
-//import java.time.OffsetDateTime;
-//import java.util.List;
-//
-//@SpringBootApplication
-//public class AutotraderSpringApplication {
-//
-//	private static final Logger log = LoggerFactory.getLogger(AutotraderSpringApplication.class);
-//
-//	public static void main(String[] args) {
-//		SpringApplication.run(AutotraderSpringApplication.class, args);
-//	}
-//
-//	@Bean
-//	public CommandLineRunner run(
-//			KisClient kisClient,
-//			CppClient cppClient,
-//			TradeAuditWriter tradeAuditWriter,
-//			@Value("${app.trade.live-order-enabled:false}") boolean liveOrderEnabled,
-//			@Value("${app.trade.budget-krw:300000}") int budgetKrw,
-//			@Value("${app.trade.order-dvsn:01}") String orderDvsn,
-//			@Value("${app.trade.order-unpr:0}") String orderUnpr
-//	) {
-//		return args -> {
-//			String symbol = "005930";
-//			int window = 9;
-//
-//			Dtos.OrderResult orderResult = null;
-//			boolean orderAttempted = false;
-//			boolean orderExecuted = false;
-//			String orderSkipReason = null;
-//			int orderQty = 0;
-//
-//			try {
-//				List<Integer> closePrices = kisClient.getRecentClosePrices(symbol, window);
-//				int lastClose = closePrices.get(closePrices.size() - 1);
-//
-//				Dtos.NowPriceResult nowPriceResult = kisClient.resolveNowPrice(symbol, lastClose);
-//
-//				Dtos.AnalyticsRequest request = new Dtos.AnalyticsRequest(
-//						symbol,
-//						window,
-//						closePrices,
-//						nowPriceResult.price()
-//				);
-//
-//				Dtos.AnalyticsResponse response = cppClient.calculateZScore(request);
-//
-//				log.info("===== 입력 =====");
-//				log.info("symbol={}", symbol);
-//				log.info("window={}", window);
-//				log.info("close_prices={}", closePrices);
-//				log.info("now_price={}", nowPriceResult.price());
-//				log.info("now_price_source={}", nowPriceResult.source());
-//				log.info("market_closed={}", nowPriceResult.marketClosed());
-//
-//				log.info("===== C++ 결과 =====");
-//				log.info("signal={}", response.signal());
-//				log.info("z_score={}", response.zScore());
-//				log.info("rolling_mean={}", response.rollingMean());
-//				log.info("rolling_stddev={}", response.rollingStddev());
-//				log.info("reason={}", response.reason());
-//
-//				if (nowPriceResult.price() != null && nowPriceResult.price() > 0) {
-//					orderQty = budgetKrw / nowPriceResult.price();
-//				}
-//
-//				if (!"BUY".equalsIgnoreCase(response.signal())) {
-//					orderSkipReason = "signal is not BUY";
-//				} else if (nowPriceResult.marketClosed()) {
-//					orderSkipReason = "market closed";
-//				} else if (orderQty < 1) {
-//					orderSkipReason = "budget is too small for 1 share";
-//				} else if (!liveOrderEnabled) {
-//					orderSkipReason = "live-order-enabled=false";
-//				} else {
-//					orderAttempted = true;
-//					orderResult = kisClient.placeCashBuyOrder(symbol, orderQty, orderDvsn, orderUnpr);
-//					orderExecuted = orderResult.success();
-//
-//					if (orderExecuted) {
-//						log.info("===== 주문 성공 =====");
-//						log.info("ord_no={}", orderResult.ordNo());
-//						log.info("msg1={}", orderResult.msg1());
-//					} else {
-//						log.warn("===== 주문 실패 =====");
-//						log.warn("rt_cd={}", orderResult.rtCd());
-//						log.warn("msg_cd={}", orderResult.msgCd());
-//						log.warn("msg1={}", orderResult.msg1());
-//					}
-//				}
-//
-//				if (orderSkipReason != null) {
-//					log.info("===== 주문 스킵 =====");
-//					log.info("skip_reason={}", orderSkipReason);
-//					log.info("order_qty={}", orderQty);
-//				}
-//
-//				Dtos.TradeRunAudit audit = new Dtos.TradeRunAudit(
-//						OffsetDateTime.now().toString(),
-//						symbol,
-//						window,
-//						closePrices,
-//						nowPriceResult.price(),
-//						nowPriceResult.source(),
-//						nowPriceResult.marketClosed(),
-//						response.signal(),
-//						response.zScore(),
-//						response.rollingMean(),
-//						response.rollingStddev(),
-//						response.reason(),
-//						budgetKrw,
-//						orderQty,
-//						orderAttempted,
-//						orderExecuted,
-//						orderSkipReason,
-//						orderResult
-//				);
-//
-//				tradeAuditWriter.write(audit);
-//				log.info("trade audit saved");
-//
-//			} catch (Exception e) {
-//				log.error("run failed", e);
-//			}
-//		};
-//	}
-//}
-
-
-
 package com.example.autotrader;
 
 import org.slf4j.Logger;
@@ -151,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @SpringBootApplication
 public class AutotraderSpringApplication {
@@ -166,20 +26,25 @@ public class AutotraderSpringApplication {
 			KisClient kisClient,
 			CppClient cppClient,
 			TradeAuditWriter tradeAuditWriter,
+			DataQualityService dataQualityService,
+			PositionService positionService,
+			TradeDecisionService tradeDecisionService,
 			@Value("${app.trade.live-order-enabled:false}") boolean liveOrderEnabled,
 			@Value("${app.trade.budget-krw:300000}") int budgetKrw,
 			@Value("${app.trade.order-dvsn:01}") String orderDvsn,
-			@Value("${app.trade.order-unpr:0}") String orderUnpr
+			@Value("${app.trade.order-unpr:0}") String orderUnpr,
+			@Value("${app.trade.symbol:005930}") String symbol,
+			@Value("${app.trade.window:9}") int window
 	) {
 		return args -> {
-			String symbol = "005930";
-			int window = 9;
+			String runId = UUID.randomUUID().toString();
 
 			Dtos.OrderResult orderResult = null;
 			boolean orderAttempted = false;
 			boolean orderExecuted = false;
 			String orderSkipReason = null;
-			int orderQty = 0;
+			int positionQtyBefore = 0;
+			int positionQtyAfterEstimate = 0;
 
 			try {
 				List<Integer> closePrices = kisClient.getRecentClosePrices(symbol, window);
@@ -196,38 +61,87 @@ public class AutotraderSpringApplication {
 
 				Dtos.AnalyticsResponse response = cppClient.calculateZScore(request);
 
-				if (nowPriceResult.price() != null && nowPriceResult.price() > 0) {
-					orderQty = budgetKrw / nowPriceResult.price();
-				}
+				Dtos.DataQualityResult dataQualityResult = dataQualityService.check(
+						lastClose,
+						nowPriceResult,
+						response
+				);
 
-				if (!"BUY".equalsIgnoreCase(response.signal())) {
-					orderSkipReason = "signal is not BUY";
-				} else if (nowPriceResult.marketClosed()) {
-					orderSkipReason = "market closed";
-				} else if (orderQty < 1) {
-					orderSkipReason = "budget is too small for 1 share";
-				} else if (!liveOrderEnabled) {
-					orderSkipReason = "live-order-enabled=false";
-				} else {
+				positionQtyBefore = positionService.getPositionQty(symbol);
+				positionQtyAfterEstimate = positionQtyBefore;
+
+				Dtos.TradeDecision decision = tradeDecisionService.decide(
+						response,
+						nowPriceResult,
+						dataQualityResult,
+						budgetKrw,
+						positionQtyBefore,
+						liveOrderEnabled
+				);
+
+				orderSkipReason = decision.orderSkipReason();
+
+				if (decision.shouldAttemptOrder()) {
 					orderAttempted = true;
-					orderResult = kisClient.placeCashBuyOrder(symbol, orderQty, orderDvsn, orderUnpr);
-					orderExecuted = orderResult.success();
+
+					try {
+						if (decision.orderSide() == Dtos.TradeSide.BUY) {
+							orderResult = kisClient.placeCashBuyOrder(
+									symbol,
+									decision.orderQty(),
+									orderDvsn,
+									orderUnpr
+							);
+						} else if (decision.orderSide() == Dtos.TradeSide.SELL) {
+							orderResult = kisClient.placeCashSellOrder(
+									symbol,
+									decision.orderQty(),
+									orderDvsn,
+									orderUnpr
+							);
+						}
+
+						orderExecuted = orderResult != null && orderResult.success();
+
+						if (orderExecuted) {
+							positionQtyAfterEstimate = positionService.applyAcceptedOrder(
+									symbol,
+									decision.orderSide(),
+									decision.orderQty(),
+									true
+							);
+						} else if (orderResult != null) {
+							orderSkipReason = "kis order rejected: " + orderResult.msgCd() + " / " + orderResult.msg1();
+						}
+					} catch (Exception orderException) {
+						orderSkipReason = "order api exception: "
+								+ orderException.getClass().getSimpleName()
+								+ " - "
+								+ orderException.getMessage();
+						log.error("order api failed: runId={}, symbol={}, side={}, qty={}",
+								runId, symbol, decision.orderSide(), decision.orderQty(), orderException);
+					}
 				}
 
-				printInputSection(symbol, window, closePrices, nowPriceResult);
+				printInputSection(symbol, window, closePrices, lastClose, nowPriceResult);
 				printAnalyticsSection(response);
+				printDataQualitySection(dataQualityResult);
+				printPositionSection(positionQtyBefore, positionQtyAfterEstimate);
+				printOrderPlanSection(decision, liveOrderEnabled);
 
 				if (orderAttempted && orderResult != null) {
 					printOrderResultSection(orderExecuted, orderResult);
 				} else {
-					printOrderSkipSection(orderSkipReason, orderQty);
+					printOrderSkipSection(orderSkipReason, decision.orderQty());
 				}
 
 				Dtos.TradeRunAudit audit = new Dtos.TradeRunAudit(
 						OffsetDateTime.now().toString(),
+						runId,
 						symbol,
 						window,
 						closePrices,
+						lastClose,
 						nowPriceResult.price(),
 						nowPriceResult.source(),
 						nowPriceResult.marketClosed(),
@@ -236,8 +150,14 @@ public class AutotraderSpringApplication {
 						response.rollingMean(),
 						response.rollingStddev(),
 						response.reason(),
+						dataQualityResult.status(),
+						dataQualityResult.reasons(),
+						dataQualityResult.priceChangeRate(),
 						budgetKrw,
-						orderQty,
+						decision.orderSide(),
+						decision.orderQty(),
+						positionQtyBefore,
+						positionQtyAfterEstimate,
 						orderAttempted,
 						orderExecuted,
 						orderSkipReason,
@@ -246,23 +166,37 @@ public class AutotraderSpringApplication {
 
 				tradeAuditWriter.write(audit);
 
-				// 파일 로그용 짧은 요약
-				log.info("trade audit saved: symbol={}, signal={}, orderAttempted={}, orderExecuted={}",
-						symbol, response.signal(), orderAttempted, orderExecuted);
-
+				log.info(
+						"trade audit saved: runId={}, symbol={}, signal={}, side={}, qty={}, attempted={}, executed={}, skipReason={}",
+						runId,
+						symbol,
+						response.signal(),
+						decision.orderSide(),
+						decision.orderQty(),
+						orderAttempted,
+						orderExecuted,
+						orderSkipReason
+				);
 			} catch (Exception e) {
 				System.out.println("===== 실행 실패 =====");
 				System.out.println(e.getMessage());
-				log.error("run failed", e);
+				log.error("run failed: runId={}, symbol={}", runId, symbol, e);
 			}
 		};
 	}
 
-	private void printInputSection(String symbol, int window, List<Integer> closePrices, Dtos.NowPriceResult nowPriceResult) {
+	private void printInputSection(
+			String symbol,
+			int window,
+			List<Integer> closePrices,
+			int lastClose,
+			Dtos.NowPriceResult nowPriceResult
+	) {
 		System.out.println("===== 입력 =====");
 		System.out.println("symbol = " + symbol);
 		System.out.println("window = " + window);
 		System.out.println("close_prices = " + closePrices);
+		System.out.println("last_close = " + lastClose);
 		System.out.println("now_price = " + nowPriceResult.price());
 		System.out.println("now_price_source = " + nowPriceResult.source());
 		System.out.println("market_closed = " + nowPriceResult.marketClosed());
@@ -277,6 +211,27 @@ public class AutotraderSpringApplication {
 		System.out.println("reason = " + response.reason());
 	}
 
+	private void printDataQualitySection(Dtos.DataQualityResult dataQualityResult) {
+		System.out.println("===== 데이터 품질 점검 =====");
+		System.out.println("status = " + dataQualityResult.status());
+		System.out.println("price_change_rate = " + dataQualityResult.priceChangeRate());
+		System.out.println("reasons = " + dataQualityResult.reasons());
+	}
+
+	private void printPositionSection(int positionQtyBefore, int positionQtyAfterEstimate) {
+		System.out.println("===== 포지션 =====");
+		System.out.println("position_qty_before = " + positionQtyBefore);
+		System.out.println("position_qty_after_estimate = " + positionQtyAfterEstimate);
+	}
+
+	private void printOrderPlanSection(Dtos.TradeDecision decision, boolean liveOrderEnabled) {
+		System.out.println("===== 주문 판단 =====");
+		System.out.println("live_order_enabled = " + liveOrderEnabled);
+		System.out.println("order_side = " + decision.orderSide());
+		System.out.println("order_qty = " + decision.orderQty());
+		System.out.println("order_skip_reason = " + decision.orderSkipReason());
+	}
+
 	private void printOrderSkipSection(String orderSkipReason, int orderQty) {
 		System.out.println("===== 주문 스킵 =====");
 		System.out.println("skip_reason = " + orderSkipReason);
@@ -285,7 +240,7 @@ public class AutotraderSpringApplication {
 
 	private void printOrderResultSection(boolean orderExecuted, Dtos.OrderResult orderResult) {
 		if (orderExecuted) {
-			System.out.println("===== 주문 성공 =====");
+			System.out.println("===== 주문 접수 성공 =====");
 		} else {
 			System.out.println("===== 주문 실패 =====");
 		}
