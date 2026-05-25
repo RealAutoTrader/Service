@@ -1,0 +1,13 @@
+# C++ Analytics 서버 예시 Dockerfile.
+# httplib.h, json.hpp, main.cpp가 같은 디렉터리에 있다고 가정합니다.
+
+FROM gcc:14 AS build
+WORKDIR /src
+COPY main.cpp httplib.h json.hpp ./
+RUN g++ -std=c++17 -O2 -pthread main.cpp -o cpp-analytics
+
+FROM debian:bookworm-slim
+WORKDIR /app
+COPY --from=build /src/cpp-analytics /app/cpp-analytics
+EXPOSE 9000
+ENTRYPOINT ["/app/cpp-analytics"]

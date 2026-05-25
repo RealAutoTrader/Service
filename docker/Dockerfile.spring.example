@@ -1,0 +1,8 @@
+# 프로젝트 루트에 두고 사용하세요.
+# ./gradlew bootJar 이후 build/libs/*.jar를 이미지에 포함합니다.
+
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY build/libs/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

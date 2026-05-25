@@ -1,0 +1,59 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: autotrader-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/autotrader.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - spring-app
+
+  spring-app:
+    image: ${SPRING_IMAGE}
+    container_name: autotrader-spring
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CPP_BASE_URL: http://cpp-analytics:9000
+      CPP_SIGNAL_PATH: /signal/zscore
+      NATS_ENABLED: "true"
+      NATS_URL: nats://nats:4222
+      KIS_BASE_URL: ${KIS_BASE_URL}
+      KIS_APP_KEY: ${KIS_APP_KEY}
+      KIS_APP_SECRET: ${KIS_APP_SECRET}
+      KIS_CANO: ${KIS_CANO}
+      KIS_ACNT_PRDT_CD: ${KIS_ACNT_PRDT_CD}
+      KIS_ORDER_BUY_TR_ID: ${KIS_ORDER_BUY_TR_ID}
+      KIS_ORDER_SELL_TR_ID: ${KIS_ORDER_SELL_TR_ID}
+      KIS_ACCOUNT_BALANCE_TR_ID: ${KIS_ACCOUNT_BALANCE_TR_ID}
+      SYNC_POSITION_BEFORE_DECISION: ${SYNC_POSITION_BEFORE_DECISION:-false}
+      STRICT_BROKER_POSITION_SYNC: ${STRICT_BROKER_POSITION_SYNC:-false}
+      UPDATE_POSITION_ON_ORDER_ACCEPTED: ${UPDATE_POSITION_ON_ORDER_ACCEPTED:-false}
+      SYNC_POSITION_AFTER_ACCEPTED_ORDER: ${SYNC_POSITION_AFTER_ACCEPTED_ORDER:-false}
+      LIVE_ORDER_ENABLED: ${LIVE_ORDER_ENABLED:-false}
+    depends_on:
+      - cpp-analytics
+      - nats
+
+  cpp-analytics:
+    image: ${CPP_IMAGE}
+    container_name: autotrader-cpp
+    expose:
+      - "9000"
+
+  nats:
+    image: nats:latest
+    container_name: autotrader-nats
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    expose:
+      - "4222"
+      - "8222"
+    volumes:
+      - nats-data:/data
+
+volumes:
+  nats-data:
