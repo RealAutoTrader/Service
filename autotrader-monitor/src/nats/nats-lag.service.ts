@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { NatsConsumerLagSummary } from '../dto/trade-event.dto';
@@ -7,6 +7,7 @@ import { NatsJetStreamService } from './nats-jetstream.service';
 
 @Injectable()
 export class NatsLagService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(NatsLagService.name);
   private timer: NodeJS.Timeout | null = null;
   private latest: NatsConsumerLagSummary | null = null;
 
@@ -19,7 +20,7 @@ export class NatsLagService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     await this.refresh();
-    const intervalMs = Number(this.configService.get<string>('NATS_LAG_POLL_INTERVAL_MS') ?? 5000);
+    const intervalMs = Number(this.configService.get<string>('NATS_LAG_POLL_INTERVAL_MS')) || 5000;
     this.timer = setInterval(() => {
       void this.refresh();
     }, intervalMs);
@@ -32,12 +33,17 @@ export class NatsLagService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async refresh(): Promise<NatsConsumerLagSummary> {
-    const summary = await this.natsService.getConsumerLagSummary();
-    this.latest = summary;
-    this.metricsService.setConsumerLag(summary);
-    await this.dashboardService.setConsumerLag(summary);
-    return summary;
+  async refresh(): Promise<NatsConsumerLagSummary | null> {
+    try {
+      const summary = await this.natsService.getConsumerLagSummary();
+      this.latest = summary;
+      this.metricsService.setConsumerLag(summary);
+      await this.dashboardService.setConsumerLag(summary);
+      return summary;
+    } catch (error) {
+      this.logger.error(`Failed to fetch NATS consumer lag: ${(error as Error).message}`);
+      return this.latest;
+    }
   }
 
   getLatest(): NatsConsumerLagSummary | null {
