@@ -1,132 +1,45 @@
-# =========================
-# Environment / Secrets
-# =========================
-.env
-.env.*
-!.env.example
-
-# KIS / API secret backups
-*.key
-*.pem
-*.p12
-*.jks
-secrets/
-secret/
-credentials/
-application-secret.yml
-application-prod-secret.yml
-
-# =========================
-# Spring Boot / Gradle
-# =========================
-.gradle/
-build/
-out/
-target/
-
-!gradle/wrapper/gradle-wrapper.jar
-
-# Gradle local properties
-gradle.properties.local
-
-# =========================
-# Logs / Runtime files
-# =========================
-logs/
-*.log
-*.jsonl
-
-# Trade audit files
-trade-audit.jsonl
-
-# =========================
-# Database / Local volume
-# =========================
-*.db
-*.sqlite
-*.sqlite3
-mysql-data/
-data/mysql/
-docker/mysql/data/
-
-# =========================
-# Docker local overrides
-# =========================
-docker-compose.override.yml
-docker-compose.local.override.yml
-
-# =========================
-# IntelliJ IDEA
-# =========================
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# =========================
-# VS Code
-# =========================
-.vscode/
-!.vscode/settings.json.example
-
-# =========================
-# macOS / Windows
-# =========================
+# ==========================================
+# 1. OS & 디렉토리 숨김 파일
+# ==========================================
 .DS_Store
-.AppleDouble
-.LSOverride
-Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 ehthumbs.db
-Desktop.ini
+Thumbs.db
 
-# =========================
-# Java
-# =========================
-*.class
-*.jar
-*.war
-*.ear
-*.nar
-hs_err_pid*
-replay_pid*
-
-# 단, 필요한 jar를 직접 커밋해야 하는 경우에는 아래처럼 예외 추가 가능
-# !libs/some-library.jar
-
-# =========================
-# C / C++ build outputs
-# =========================
-*.o
-*.obj
-*.so
-*.dylib
-*.dll
-*.exe
-*.out
-*.a
-*.lib
-
-# C++ server binary examples
-zscore-server
-main
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-Makefile
-
-# =========================
-# Test / Coverage
-# =========================
-coverage/
-jacoco/
-*.exec
-
-# =========================
-# Temporary files
-# =========================
-tmp/
-temp/
-*.tmp
-*.bak
+# ==========================================
+# 2. IDE (에디터) 설정 파일
+# ==========================================
+.idea/
+.vscode/
 *.swp
 *.swo
+*.sublime-workspace
+
+# ==========================================
+# 3. 환경 변수 및 보안 파일 (가장 중요!)
+# ==========================================
+.env
+.env.*
+*.local
+*.pem
+*.key
+credentials.json
+
+# ==========================================
+# 4. 공통 로그 파일
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# 5. 최상단 실수 방지 (혹시 모를 빌드 찌꺼기)
+# ==========================================
+node_modules/
+build/
+dist/
+coverage/

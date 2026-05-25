@@ -1,0 +1,97 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (subject) (rate(autotrader_monitor_events_total[1m]))", "legendFormat": "{{subject}}", "refId": "A" }
+      ],
+      "title": "Event Throughput by Subject",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "autotrader_monitor_nats_consumer_pending", "legendFormat": "pending", "refId": "A" },
+        { "expr": "autotrader_monitor_nats_consumer_ack_pending", "legendFormat": "ack_pending", "refId": "B" },
+        { "expr": "autotrader_monitor_nats_consumer_redelivered", "legendFormat": "redelivered", "refId": "C" }
+      ],
+      "title": "NATS Consumer Lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (level, subject) (rate(autotrader_monitor_warnings_total[5m]))", "legendFormat": "{{level}} / {{subject}}", "refId": "A" }
+      ],
+      "title": "Warnings",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "sum by (symbol, signal, order_status) (rate(autotrader_monitor_runs_completed_total[5m]))", "legendFormat": "{{symbol}} / {{signal}} / {{order_status}}", "refId": "A" }
+      ],
+      "title": "Runs Completed",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 },
+      "id": 5,
+      "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true },
+      "targets": [
+        { "expr": "autotrader_monitor_redis_up", "legendFormat": "redis_up", "refId": "A" }
+      ],
+      "title": "Redis Up",
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 16 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(autotrader_monitor_event_processing_seconds_bucket[5m])) by (le, subject))", "legendFormat": "p95 {{subject}}", "refId": "A" }
+      ],
+      "title": "Event Processing Latency p95",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 40,
+  "tags": ["autotrader", "nats", "nestjs"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "AutoTrader Monitor v2",
+  "uid": "autotrader-monitor-v2",
+  "version": 1,
+  "weekStart": ""
+}

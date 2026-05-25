@@ -1,0 +1,11 @@
+services:
+  autotrader-monitor:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: autotrader-monitor
+    env_file:
+      - ../.env
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
